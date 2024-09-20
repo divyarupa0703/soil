@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil Health Predictor</title>
+    <style>
+        /* styles.css */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+            color: #333;
+        }
+        
+        form {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box; /* Ensures padding and border are included in the total width */
+        }
+        
+        @media (max-width: 768px) {
+            form {
+                width: 95%;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            form {
+                width: 100%;
+                padding: 10px;
+            }
+        
+            input[type="submit"] {
+                padding: 12px 15px;
+                font-size: 14px;
+            }
+        }
+        
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        
+        input[type="text"], 
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+        
+        #result {
+            text-align: center;
+            font-size: 18px;
+            margin: 20px auto;
+            color: #333;
+        }
+        
+        #recommendations {
+            text-align: center;
+            font-size: 16px;
+            margin: 20px auto;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            max-width: 600px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+            line-height: 1.6;
+        }
+        
+        #recommendations br {
+            display: block;
+            margin: 5px 0;
+        }
+        
+        #recommendations p {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Soil Health Predictor</h1>
+    <form id="predictionForm">
+        <label for="pH">pH:</label>
+        <input type="number" id="pH" name="pH" step="0.1" required><br>
+
+        <label for="Organic_Matter">Organic Matter (%):</label>
+        <input type="number" id="Organic_Matter" name="Organic_Matter" step="0.1" required><br>
+
+        <label for="CEC">Cation Exchange Capacity (meq/100g):</label>
+        <input type="number" id="CEC" name="CEC" step="0.1" required><br>
+
+        <label for="EC">Electrical Conductivity (dS/m):</label>
+        <input type="number" id="EC" name="EC" step="0.1" required><br>
+
+        <label for="Bulk_Density">Bulk Density (g/cm³):</label>
+        <input type="number" id="Bulk_Density" name="Bulk_Density" step="0.1" required><br>
+
+        <input type="submit" value="Predict">
+    </form>
+
+    <h2 id="result"></h2>
+    <div id="recommendations"></div>
+
+    <script>
+        document.getElementById('predictionForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = parseFloat(value);
+            });
+
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.error) {
+                    document.getElementById('result').textContent = `Error: ${result.error}`;
+                    document.getElementById('recommendations').textContent = '';
+                } else {
+                    document.getElementById('result').textContent = `Soil Health Category: ${result.Soil_Health_Category}`;
+
+                    // Fetch recommendations
+                    fetch('/recommendations', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(recResponse => recResponse.json())
+                    .then(recResult => {
+                        if (recResult.error) {
+                            document.getElementById('recommendations').innerHTML = `Error: ${recResult.error}`;
+                        } else {
+                            const recommendations = recResult.recommendations.join('<br>');
+                            document.getElementById('recommendations').innerHTML = recommendations;
+                        }
+                    })
+                    .catch(error => {
+                        document.getElementById('recommendations').innerHTML = `Error: ${error.message}`;
+                    });
+                }
+            })
+            .catch(error => {
+                document.getElementById('result').textContent = `Error: ${error.message}`;
+                document.getElementById('recommendations').textContent = '';
+            });
+        });
+    </script>
+</body>
+</html>
